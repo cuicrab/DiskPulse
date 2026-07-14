@@ -189,7 +189,6 @@ DiskPulse/
 
 ## 🖼️ 界面预览 / Screenshots
 
-> 截图占位：请替换为实际运行截图 / Replace with actual screenshots
 
 | 仪表盘 / Dashboard | 扫描结果 / Scan Results | 清理建议 / Cleanup Suggestions |
 |-------------------|------------------------|-------------------------------|
