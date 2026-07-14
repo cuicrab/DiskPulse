@@ -9,8 +9,13 @@ from app.scanner.recycler import get_recycle_bin_info
 from app.utils.file_ops import get_folder_size
 
 
+from app.utils import resource_path
+
+
 class AdvisorEngine:
-    def __init__(self, rules_path: str = "rules.yaml"):
+    def __init__(self, rules_path: str = ""):
+        if not rules_path:
+            rules_path = resource_path("rules.yaml")
         self.rules = self._load_rules(rules_path)
 
     def _load_rules(self, path: str) -> List[Dict[str, Any]]:

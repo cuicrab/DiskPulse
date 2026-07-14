@@ -1,7 +1,10 @@
 from dataclasses import dataclass, field
 from typing import List
 import json
+import os
 from pathlib import Path
+
+from app.utils import resource_path
 
 
 @dataclass
@@ -18,7 +21,7 @@ class AppSettings:
     # Session state
     window_width: int = 1100
     window_height: int = 720
-    splitter_sizes: List[int] = field(default_factory=lambda: [200, 900])
+    splitter_sizes: List[str] = field(default_factory=lambda: [200, 900])
     last_page: str = "dashboard"
 
     # File list state
@@ -33,12 +36,17 @@ class AppSettings:
 
     @classmethod
     def load(cls, path: str = "settings.json") -> "AppSettings":
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            return cls(**data)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return cls()
+        paths_to_try = [path]
+        if not os.path.isabs(path):
+            paths_to_try.append(resource_path(path))
+        for p in paths_to_try:
+            try:
+                with open(p, encoding="utf-8") as f:
+                    data = json.load(f)
+                return cls(**data)
+            except (FileNotFoundError, json.JSONDecodeError):
+                continue
+        return cls()
 
     def save(self, path: str = "settings.json") -> None:
         with open(path, "w", encoding="utf-8") as f:
