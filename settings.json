@@ -1,0 +1,25 @@
+{
+  "min_large_file_mb": 100,
+  "old_file_days": 90,
+  "scan_paths": [
+    "C:/"
+  ],
+  "exclude_paths": [],
+  "theme": "dark",
+  "language": "en_US",
+  "use_recycle_bin": true,
+  "confirm_before_delete": true,
+  "window_width": 1200,
+  "window_height": 800,
+  "splitter_sizes": [
+    250,
+    950
+  ],
+  "last_page": "scan",
+  "selected_file_paths": [],
+  "file_list_sort_column": 2,
+  "file_list_sort_order": 2,
+  "file_list_filter_index": 0,
+  "last_scan_paths": [],
+  "last_selected_files": []
+}

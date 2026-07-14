@@ -1,0 +1,97 @@
+rules:
+  - name: chrome_cache
+    description: Chrome 浏览器缓存
+    paths:
+      - "%LOCALAPPDATA%/Google/Chrome/User Data/*/Cache"
+      - "%LOCALAPPDATA%/Google/Chrome/User Data/*/Code Cache"
+    importance: 3
+    importance_label: 强烈建议清理
+    hint: 缓存文件用于加速网页加载，删除后浏览器会重新下载，不影响浏览记录和密码
+    pattern: "*"
+    max_age_days: 0
+
+  - name: edge_cache
+    description: Edge 浏览器缓存
+    paths:
+      - "%LOCALAPPDATA%/Microsoft/Edge/User Data/*/Cache"
+      - "%LOCALAPPDATA%/Microsoft/Edge/User Data/*/Code Cache"
+    importance: 3
+    importance_label: 强烈建议清理
+    hint: 缓存文件用于加速网页加载，删除后浏览器会重新下载，不影响浏览记录和密码
+    pattern: "*"
+    max_age_days: 0
+
+  - name: system_temp
+    description: 系统临时文件
+    paths:
+      - "%TEMP%"
+      - "C:/Windows/Temp"
+    importance: 3
+    importance_label: 强烈建议清理
+    hint: 系统临时文件由程序和系统自动生成，删除不影响系统稳定性
+    pattern: "*.tmp"
+    max_age_days: 1
+
+  - name: recycler
+    description: 回收站
+    paths: []
+    importance: 3
+    importance_label: 强烈建议清理
+    hint: 回收站中的文件在清空后将永久删除，请确认回收站内没有你需要保留的文件
+
+  - name: wechat_cache
+    description: 微信缓存文件
+    paths:
+      - "%USERPROFILE%/Documents/WeChat Files/*/FileStorage"
+    importance: 1
+    importance_label: 谨慎清理
+    hint: 微信缓存包括聊天中的图片视频，删除后聊天记录不受影响，但需重新下载媒体文件
+    pattern: "{Image,Video,File}/*"
+    max_age_days: 0
+
+  - name: qq_cache
+    description: QQ 缓存文件
+    paths:
+      - "%USERPROFILE%/Documents/Tencent Files/*/Image"
+      - "%USERPROFILE%/Documents/Tencent Files/*/FileRecv"
+    importance: 1
+    importance_label: 谨慎清理
+    hint: QQ 缓存的图片和文件，删除后不影响聊天记录，但需重新下载
+    pattern: "*"
+    max_age_days: 0
+
+  - name: prefetch
+    description: Windows Prefetch 预读文件
+    paths:
+      - "C:/Windows/Prefetch"
+    importance: 1
+    importance_label: 谨慎清理
+    hint: Prefetch 用于加速程序启动，删除后下次启动会变慢，但不会影响功能
+    pattern: "*.pf"
+    max_age_days: 30
+
+  - name: recent_files
+    description: 最近使用的文件快捷方式
+    paths:
+      - "%APPDATA%/Microsoft/Windows/Recent"
+    importance: 2
+    importance_label: 建议检查清理
+    hint: 这些是最近打开文件的快捷方式，删除不影响实际文件
+    pattern: "*"
+    max_age_days: 30
+
+  - name: old_large_files
+    description: 超过 90 天未访问的大文件
+    paths: []
+    importance: 2
+    importance_label: 建议检查清理
+    hint: 这些文件长期未使用，可能是不再需要的旧文件，请确认后再删除
+    min_size_mb: 100
+    max_access_days: 90
+
+  - name: duplicate_files
+    description: 重复文件
+    paths: []
+    importance: 2
+    importance_label: 建议检查清理
+    hint: 这些文件内容完全相同，可能只是备份副本。请确认保留位置后再删除
