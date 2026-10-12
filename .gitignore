@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# 运行时产物
+logs/
+*.log
+
+# 打包
+*.spec
+!DiskPulse.spec
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 工具链
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+.opencode/.gitignore
+
+# 操作系统
+Thumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
+
+# 临时
+*.tmp
+*.bak
