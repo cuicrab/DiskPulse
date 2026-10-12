@@ -1,6 +1,6 @@
 from typing import List, Optional, Set
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QRect
-from PySide6.QtGui import QColor, QAction, QFont, QPainter
+from PySide6.QtGui import QColor, QAction, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QHeaderView, QAbstractItemView,
     QFrame, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
@@ -11,15 +11,16 @@ from PySide6.QtWidgets import (
 from app.models.file_item import FileItem, FileCategory
 from app.i18n import tr
 
-# 类别标签用低饱和色，配合深色背景与浅色文字，避免高饱和“荧光”感
+# 类别标签：浅色主题下用「淡底 + 同色系深字」，避免高饱和色块与白字
+# 值 = (显示名, 底色, 文字色, 描边色)
 CATEGORY_MAP = {
-    FileCategory.LARGE_FILE: ("大文件", "#F0A44A"),
-    FileCategory.DUPLICATE: ("重复文件", "#D8C36B"),
-    FileCategory.TEMP_FILE: ("临时文件", "#6FA8DC"),
-    FileCategory.EMPTY_FOLDER: ("空文件夹", "#9B8FE0"),
-    FileCategory.CACHE: ("缓存文件", "#3FD9A4"),
-    FileCategory.OLD_FILE: ("旧文件", "#D99A82"),
-    FileCategory.RECYCLER: ("回收站", "#E06C5F"),
+    FileCategory.LARGE_FILE: ("大文件", "#FDF0DC", "#9A6400", "#F2DDB8"),
+    FileCategory.DUPLICATE: ("重复文件", "#FBF3D0", "#8A6D1A", "#EDE2B8"),
+    FileCategory.TEMP_FILE: ("临时文件", "#EAF2FB", "#2A6BA8", "#D3E3F4"),
+    FileCategory.EMPTY_FOLDER: ("空文件夹", "#F0EEFB", "#5B4BC4", "#DFDBF3"),
+    FileCategory.CACHE: ("缓存文件", "#E7F6F0", "#0E8A65", "#C7E9DC"),
+    FileCategory.OLD_FILE: ("旧文件", "#FBEFEA", "#A9502F", "#F0DCD2"),
+    FileCategory.RECYCLER: ("回收站", "#FCEBE9", "#C0392F", "#F2D2CE"),
 }
 
 CATEGORY_FILTER_OPTIONS = [
@@ -82,15 +83,16 @@ class CategoryDelegate(QStyledItemDelegate):
         painter.setFont(font)
 
         for cat in categories:
-            label, color = CATEGORY_MAP.get(cat, ("其他", "#636e72"))
+            label, bg, fg, border = CATEGORY_MAP.get(
+                cat, ("其他", "#F1F3F6", "#5B6472", "#E4E7EC"))
             text_width = painter.fontMetrics().horizontalAdvance(label) + 18
             tag_rect = QRect(x, y, text_width, tag_h)
 
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(color))
-            painter.drawRoundedRect(tag_rect, tag_h / 2, tag_h / 2)
+            painter.setPen(QPen(QColor(border), 1))
+            painter.setBrush(QColor(bg))
+            painter.drawRoundedRect(tag_rect.adjusted(0, 0, -1, -1), tag_h / 2, tag_h / 2)
 
-            painter.setPen(QColor("#0B1512"))
+            painter.setPen(QColor(fg))
             painter.drawText(tag_rect, Qt.AlignCenter, label)
 
             x += text_width + 6
@@ -104,7 +106,7 @@ class CategoryDelegate(QStyledItemDelegate):
 
         total_width = 0
         for cat in categories:
-            label, _ = CATEGORY_MAP.get(cat, ("其他", "#636e72"))
+            label = CATEGORY_MAP.get(cat, ("其他",))[0]
             total_width += option.fontMetrics.horizontalAdvance(label) + 18 + 6
 
         return QSize(total_width + 12, 26)
@@ -219,8 +221,10 @@ class FileListPanel(QFrame):
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["", tr("FileListPanel", "文件名"), tr("FileListPanel", "大小"), tr("FileListPanel", "修改时间"), tr("FileListPanel", "路径"), tr("FileListPanel", "类别")])
+        self.tree.setRootIsDecorated(False)
+        self.tree.setIndentation(6)
         # 列宽之和刻意留出余量，避免出现横向滚动条
-        self.tree.setColumnWidth(0, 44)
+        self.tree.setColumnWidth(0, 40)
         self.tree.setColumnWidth(1, 240)
         self.tree.setColumnWidth(2, 96)
         self.tree.setColumnWidth(3, 150)
@@ -278,8 +282,8 @@ class FileListPanel(QFrame):
                 # Create new tree item
                 categories = item.all_categories
                 primary_cat = categories[0] if categories else FileCategory.LARGE_FILE
-                category_label, color = CATEGORY_MAP.get(
-                    primary_cat, ("其他", "#636e72")
+                category_label, _bg, fg, _border = CATEGORY_MAP.get(
+                    primary_cat, ("其他", "#F1F3F6", "#5B6472", "#E4E7EC")
                 )
 
                 checkbox = QTreeWidgetItem()
@@ -290,7 +294,7 @@ class FileListPanel(QFrame):
                 checkbox.setText(3, item.modified_time.strftime("%Y-%m-%d %H:%M"))
                 checkbox.setText(4, str(item.path.parent))
                 checkbox.setText(5, category_label)  # fallback text for sorting
-                checkbox.setForeground(5, QColor(color))
+                checkbox.setForeground(5, QColor(fg))
                 checkbox.setData(0, Qt.UserRole, str(item.path))
                 checkbox.setData(0, Qt.UserRole + 1, categories)  # store all categories
                 checkbox.setData(5, Qt.UserRole, categories)  # for delegate rendering

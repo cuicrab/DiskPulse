@@ -43,14 +43,14 @@ class MiniGauge(QWidget):
         pen.setWidth(max(6, int(r * 0.15)))
         pen.setCapStyle(Qt.RoundCap)
 
-        pen.setColor(QColor("#2d2d2d"))
+        pen.setColor(QColor("#E4E7EC"))
         painter.setPen(pen)
         painter.drawArc(rect, 1440, 2880)
 
         gradient = QLinearGradient(rect.topLeft(), rect.bottomRight())
-        gradient.setColorAt(0.0, QColor("#00b894"))
-        gradient.setColorAt(0.5, QColor("#fdcb6e"))
-        gradient.setColorAt(1.0, QColor("#e17055"))
+        gradient.setColorAt(0.0, QColor("#2FBF8F"))
+        gradient.setColorAt(0.5, QColor("#F0B429"))
+        gradient.setColorAt(1.0, QColor("#E06C5F"))
         pen.setBrush(QBrush(gradient))
         painter.setPen(pen)
 
@@ -61,12 +61,12 @@ class MiniGauge(QWidget):
 
         fontSize = max(9, int(r * 0.22))
         painter.setFont(QFont("Segoe UI", fontSize, QFont.Bold))
-        painter.setPen(QColor("#dfe6e9"))
+        painter.setPen(QColor("#1C2024"))
         painter.drawText(QRectF(cx - 50, cy - fontSize, 100, fontSize * 2),
                          Qt.AlignCenter, f"{self._percent:.0f}%")
 
         painter.setFont(QFont("Segoe UI", max(10, int(r * 0.25)), QFont.Bold))
-        painter.setPen(QColor("#00b894"))
+        painter.setPen(QColor("#0E8A65"))
         painter.drawText(QRectF(0, int(h * 0.78), w, int(h * 0.2)),
                          Qt.AlignCenter, self._drive)
 
@@ -110,14 +110,14 @@ class DiskGauge(QWidget):
         pen.setWidth(12)
         pen.setCapStyle(Qt.RoundCap)
 
-        pen.setColor(QColor("#2d2d2d"))
+        pen.setColor(QColor("#E4E7EC"))
         painter.setPen(pen)
         painter.drawArc(rect, 1440, 2880)
 
         gradient = QLinearGradient(rect.topLeft(), rect.bottomRight())
-        gradient.setColorAt(0.0, QColor("#00b894"))
-        gradient.setColorAt(0.5, QColor("#fdcb6e"))
-        gradient.setColorAt(1.0, QColor("#e17055"))
+        gradient.setColorAt(0.0, QColor("#2FBF8F"))
+        gradient.setColorAt(0.5, QColor("#F0B429"))
+        gradient.setColorAt(1.0, QColor("#E06C5F"))
         pen.setBrush(QBrush(gradient))
         painter.setPen(pen)
 
@@ -128,17 +128,17 @@ class DiskGauge(QWidget):
         center = rect.center()
 
         painter.setFont(QFont("Segoe UI", 12))
-        painter.setPen(QColor("#b2bec3"))
+        painter.setPen(QColor("#8A93A2"))
         painter.drawText(QRectF(center.x() - 60, center.y() - 45, 120, 20),
                          Qt.AlignCenter, self._drive)
 
         painter.setFont(QFont("Segoe UI", 28, QFont.Bold))
-        painter.setPen(QColor("#ffffff"))
+        painter.setPen(QColor("#1C2024"))
         painter.drawText(QRectF(center.x() - 80, center.y() - 25, 160, 40),
                          Qt.AlignCenter, f"{self._percent:.0f}%")
 
         painter.setFont(QFont("Segoe UI", 10))
-        painter.setPen(QColor("#636e72"))
+        painter.setPen(QColor("#8A93A2"))
         used_str = self._format_size(self._used)
         total_str = self._format_size(self._total)
         painter.drawText(QRectF(center.x() - 80, center.y() + 15, 160, 20),

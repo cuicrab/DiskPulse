@@ -234,22 +234,30 @@ class AdvisorPanel(QFrame):
         self._clear_cards()
         self._cards.clear()
 
+        # 分档配色：浅色主题下用同色系深字 + 淡底，并显式声明背景透明之外的样子，
+        # 避免 QLabel 被填入默认窗口底色而显得和面板脱节
         sections = [
-            (tr("AdvisorPanel", "⭐⭐⭐ 强烈建议清理"), suggestions.get("strongly_recommended", []), "#00b894"),
-            (tr("AdvisorPanel", "⭐⭐ 建议检查清理"), suggestions.get("suggested", []), "#fdcb6e"),
-            (tr("AdvisorPanel", "⭐ 谨慎清理"), suggestions.get("caution", []), "#e17055"),
+            (tr("AdvisorPanel", "强烈建议清理"), suggestions.get("strongly_recommended", []),
+             "color:#0E8A65;background:#E7F6F0;border:1px solid #C7E9DC;"
+             "border-radius:7px;padding:7px 12px;"),
+            (tr("AdvisorPanel", "建议检查清理"), suggestions.get("suggested", []),
+             "color:#9A6400;background:#FDF0DC;border:1px solid #F2DDB8;"
+             "border-radius:7px;padding:7px 12px;"),
+            (tr("AdvisorPanel", "谨慎清理"), suggestions.get("caution", []),
+             "color:#C0392F;background:#FCEBE9;border:1px solid #F2D2CE;"
+             "border-radius:7px;padding:7px 12px;"),
         ]
 
-        for section_title, items, color in sections:
+        for section_title, items, style in sections:
             if not items:
                 continue
 
             total_size = sum(item.size_bytes for item in items)
             header = QLabel(
-                f'{section_title}  (可释放 {self._format_size(total_size)})'
+                f'{section_title}   可释放 {self._format_size(total_size)}'
             )
             header.setObjectName("sectionHeader")
-            header.setStyleSheet(f"color: {color};")
+            header.setStyleSheet(style)
             self._scroll_layout.insertWidget(
                 self._scroll_layout.count() - 1, header
             )
