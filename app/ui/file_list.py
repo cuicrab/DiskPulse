@@ -228,50 +228,60 @@ class FileListPanel(QFrame):
         self.size_label.setText(tr("FileListPanel", "共 0 项，0 B"))
 
     def add_items(self, items: List[FileItem]):
-        for item in items:
-            path_key = str(item.path)
+        new_items: List[FileItem] = []
+        self.tree.setUpdatesEnabled(False)
+        self.tree.setSortingEnabled(False)
+        try:
+            for item in items:
+                path_key = str(item.path)
 
-            # Check if item already exists (deduplication)
-            if path_key in self._path_to_item:
-                existing_item = self._path_to_item[path_key]
-                # Merge categories
-                existing_cats = existing_item.data(0, Qt.UserRole + 1)
-                if existing_cats is None:
-                    existing_cats = []
-                for cat in item.all_categories:
-                    if cat not in existing_cats:
-                        existing_cats.append(cat)
-                # Update category display data
-                existing_item.setData(0, Qt.UserRole + 1, existing_cats)
-                existing_item.setData(5, Qt.UserRole, existing_cats)
-                continue
+                # Check if item already exists (deduplication)
+                if path_key in self._path_to_item:
+                    existing_item = self._path_to_item[path_key]
+                    # Merge categories
+                    existing_cats = existing_item.data(0, Qt.UserRole + 1)
+                    if existing_cats is None:
+                        existing_cats = []
+                    for cat in item.all_categories:
+                        if cat not in existing_cats:
+                            existing_cats.append(cat)
+                    # Update category display data
+                    existing_item.setData(0, Qt.UserRole + 1, existing_cats)
+                    existing_item.setData(5, Qt.UserRole, existing_cats)
+                    continue
 
-            # Create new tree item
-            categories = item.all_categories
-            primary_cat = categories[0] if categories else FileCategory.LARGE_FILE
-            category_label, color = CATEGORY_MAP.get(
-                primary_cat, ("其他", "#636e72")
-            )
+                # Create new tree item
+                categories = item.all_categories
+                primary_cat = categories[0] if categories else FileCategory.LARGE_FILE
+                category_label, color = CATEGORY_MAP.get(
+                    primary_cat, ("其他", "#636e72")
+                )
 
-            checkbox = QTreeWidgetItem()
-            checkbox.setFlags(checkbox.flags() | Qt.ItemIsUserCheckable)
-            checkbox.setCheckState(0, Qt.Unchecked)
-            checkbox.setText(1, item.name)
-            checkbox.setText(2, item.size_str)
-            checkbox.setText(3, item.modified_time.strftime("%Y-%m-%d %H:%M"))
-            checkbox.setText(4, str(item.path.parent))
-            checkbox.setText(5, category_label)  # fallback text for sorting
-            checkbox.setForeground(5, QColor(color))
-            checkbox.setData(0, Qt.UserRole, str(item.path))
-            checkbox.setData(0, Qt.UserRole + 1, categories)  # store all categories
-            checkbox.setData(5, Qt.UserRole, categories)  # for delegate rendering
-            checkbox.setSizeHint(0, QSize(24, 24))
-            self.tree.addTopLevelItem(checkbox)
+                checkbox = QTreeWidgetItem()
+                checkbox.setFlags(checkbox.flags() | Qt.ItemIsUserCheckable)
+                checkbox.setCheckState(0, Qt.Unchecked)
+                checkbox.setText(1, item.name)
+                checkbox.setText(2, item.size_str)
+                checkbox.setText(3, item.modified_time.strftime("%Y-%m-%d %H:%M"))
+                checkbox.setText(4, str(item.path.parent))
+                checkbox.setText(5, category_label)  # fallback text for sorting
+                checkbox.setForeground(5, QColor(color))
+                checkbox.setData(0, Qt.UserRole, str(item.path))
+                checkbox.setData(0, Qt.UserRole + 1, categories)  # store all categories
+                checkbox.setData(5, Qt.UserRole, categories)  # for delegate rendering
+                checkbox.setSizeHint(0, QSize(24, 24))
+                self.tree.addTopLevelItem(checkbox)
 
-            self._checkboxes[path_key] = checkbox
-            self._path_to_item[path_key] = checkbox
+                self._checkboxes[path_key] = checkbox
+                self._path_to_item[path_key] = checkbox
+                new_items.append(item)
+        finally:
+            self.tree.setSortingEnabled(True)
+            self.tree.setUpdatesEnabled(True)
 
-        self._items.extend(items)
+        # 只统计真正新建的条目：同一文件可能同时属于大文件/旧文件等多个类别，
+        # 若整批 extend 会让项数与总大小被重复累加
+        self._items.extend(new_items)
         self._update_stats()
 
     def _update_stats(self):
@@ -382,169 +392,3 @@ class FileListPanel(QFrame):
             if str(Path(path_str)) in path_set:
                 cb.setCheckState(0, Qt.Checked)
 
-    def changeEvent(self, event):
-        if event.type() == QEvent.Type.LanguageChange:
-            self.retranslateUi()
-        super().changeEvent(event)
-
-    def clear_results(self):
-        self.tree.clear()
-        self._items.clear()
-        self._checkboxes.clear()
-        self._path_to_item.clear()
-        self.size_label.setText(tr("FileListPanel", "共 0 项，0 B"))
-
-    def add_items(self, items: List[FileItem]):
-        for item in items:
-            path_key = str(item.path)
-
-            # Check if item already exists (deduplication)
-            if path_key in self._path_to_item:
-                existing_item = self._path_to_item[path_key]
-                # Merge categories
-                existing_cats = existing_item.data(0, Qt.UserRole + 1)
-                if existing_cats is None:
-                    existing_cats = []
-                for cat in item.all_categories:
-                    if cat not in existing_cats:
-                        existing_cats.append(cat)
-                # Update category display data
-                existing_item.setData(0, Qt.UserRole + 1, existing_cats)
-                existing_item.setData(5, Qt.UserRole, existing_cats)
-                continue
-
-            # Create new tree item
-            categories = item.all_categories
-            primary_cat = categories[0] if categories else FileCategory.LARGE_FILE
-            category_label, color = CATEGORY_MAP.get(
-                primary_cat, ("其他", "#636e72")
-            )
-
-            checkbox = QTreeWidgetItem()
-            checkbox.setFlags(checkbox.flags() | Qt.ItemIsUserCheckable)
-            checkbox.setCheckState(0, Qt.Unchecked)
-            checkbox.setText(1, item.name)
-            checkbox.setText(2, item.size_str)
-            checkbox.setText(3, item.modified_time.strftime("%Y-%m-%d %H:%M"))
-            checkbox.setText(4, str(item.path.parent))
-            checkbox.setText(5, category_label)  # fallback text for sorting
-            checkbox.setForeground(5, QColor(color))
-            checkbox.setData(0, Qt.UserRole, str(item.path))
-            checkbox.setData(0, Qt.UserRole + 1, categories)  # store all categories
-            checkbox.setData(5, Qt.UserRole, categories)  # for delegate rendering
-            checkbox.setSizeHint(0, QSize(24, 24))
-            self.tree.addTopLevelItem(checkbox)
-
-            self._checkboxes[path_key] = checkbox
-            self._path_to_item[path_key] = checkbox
-
-        self._items.extend(items)
-        self._update_stats()
-
-    def _update_stats(self):
-        total = len(self._items)
-        total_size = sum(item.size for item in self._items)
-        self.size_label.setText(tr("FileListPanel", "共 {} 项，{}").format(total, FileItem.format_size(total_size)))
-
-    def _on_select_all(self, state):
-        checked = Qt.Checked if state == Qt.CheckState.Checked.value else Qt.Unchecked
-        for checkbox in self._checkboxes.values():
-            checkbox.setCheckState(0, checked)
-
-    def _on_item_clicked(self, item, column):
-        if column == 0:
-            return
-        current = item.checkState(0)
-        item.setCheckState(0, Qt.Unchecked if current == Qt.Checked else Qt.Checked)
-
-    def _on_item_changed(self, item, column):
-        if column == 0:
-            checked_count = sum(
-                1 for cb in self._checkboxes.values()
-                if cb.checkState(0) == Qt.Checked
-            )
-            self.selection_changed.emit(checked_count)
-            self.open_btn.setEnabled(checked_count > 0)
-
-    def _on_delete(self):
-        selected = []
-        for path_str, cb in self._checkboxes.items():
-            if cb.checkState(0) == Qt.Checked:
-                from pathlib import Path
-                selected.append(Path(path_str))
-        if selected:
-            self.delete_requested.emit(selected)
-
-    def get_selected_paths(self) -> list:
-        from pathlib import Path
-        selected = []
-        for path_str, cb in self._checkboxes.items():
-            if cb.checkState(0) == Qt.Checked:
-                selected.append(Path(path_str))
-        return selected
-
-    def _apply_filter(self):
-        category_filter = CATEGORY_FILTER_OPTIONS[self.filter_combo.currentIndex()][1]
-        for i in range(self.tree.topLevelItemCount()):
-            item = self.tree.topLevelItem(i)
-            if category_filter is None:
-                item.setHidden(False)
-            else:
-                categories = item.data(0, Qt.UserRole + 1)
-                if not categories:
-                    item.setHidden(True)
-                else:
-                    item.setHidden(category_filter not in categories)
-
-    def _apply_sort(self):
-        _, col, order = SORT_OPTIONS[self.sort_combo.currentIndex()]
-        self.tree.sortItems(col, order)
-
-    def _show_context_menu(self, pos):
-        item = self.tree.itemAt(pos)
-        if not item:
-            return
-        path_str = item.data(0, Qt.UserRole)
-        menu = QMenu(self)
-        open_action = QAction(tr("FileListPanel", "打开文件位置"), self)
-        open_action.triggered.connect(lambda: self._open_file_location(path_str))
-        menu.addAction(open_action)
-
-        copy_action = QAction(tr("FileListPanel", "复制路径"), self)
-        copy_action.triggered.connect(lambda: self._copy_path(path_str))
-        menu.addAction(copy_action)
-
-        menu.exec(self.tree.mapToGlobal(pos))
-
-    def _on_item_double_clicked(self, item, column):
-        path_str = item.data(0, Qt.UserRole)
-        if path_str:
-            self._open_file_location(path_str)
-
-    def _open_selected_location(self):
-        for path_str, cb in self._checkboxes.items():
-            if cb.checkState(0) == Qt.Checked:
-                self._open_file_location(path_str)
-                return
-
-    @staticmethod
-    def _open_file_location(path_str: str):
-        import subprocess, os
-        if os.path.isdir(path_str):
-            subprocess.Popen(["explorer", path_str])
-        else:
-            subprocess.Popen(["explorer", "/select,", path_str])
-
-    @staticmethod
-    def _copy_path(path_str: str):
-        from PySide6.QtGui import QClipboard
-        from PySide6.QtWidgets import QApplication
-        QApplication.clipboard().setText(path_str)
-
-    def restore_selections(self, paths: list):
-        """Restore checkbox selections for given paths after items are loaded"""
-        from pathlib import Path
-        path_set = {str(Path(p)) for p in paths}
-        for path_str, cb in self._checkboxes.items():
-            if str(Path(path_str)) in path_set:
-                cb.setCheckState(0, Qt.Checked)

@@ -147,7 +147,6 @@ class MainWindow(QMainWindow):
         self.scan_engine: ScanEngine = None
         self._scan_result = None
         self._trans_mgr = get_translation_manager()
-        self._trans_mgr.add_observer(self._on_language_changed)
 
         self._setup_ui()
         self._check_admin()
@@ -160,10 +159,6 @@ class MainWindow(QMainWindow):
         if event.type() == QEvent.Type.LanguageChange:
             self.retranslateUi()
         super().changeEvent(event)
-
-    def _on_language_changed(self, locale_code: str):
-        """语言切换回调 - 热切换"""
-        self.retranslateUi()
 
     def retranslateUi(self):
         """热切换时更新所有 UI 文本"""
@@ -282,7 +277,7 @@ class MainWindow(QMainWindow):
         for code, name in tm.available_languages().items():
             self.lang_combo.addItem(name, code)
         self.lang_combo.setCurrentText(tm.current_language_name())
-        self.lang_combo.currentIndexChanged.connect(self._on_language_changed)
+        self.lang_combo.currentIndexChanged.connect(self._on_lang_combo_changed)
         sidebar_layout.addWidget(self.lang_combo)
 
         self.admin_btn = QPushButton()
@@ -334,11 +329,11 @@ class MainWindow(QMainWindow):
         sb.addWidget(self.status_label)
         sb.setObjectName("statusBar")
 
-    def _on_language_changed(self, index: int):
+    def _on_lang_combo_changed(self, index: int):
+        """语言下拉框切换：仅负责加载语言，界面刷新由 LanguageChange 事件驱动"""
         locale_code = self.lang_combo.itemData(index)
-        if locale_code and self._trans_mgr.load_language(locale_code):
-            self._trans_mgr.save_language_preference(locale_code)
-            # 热切换已生效，无需重启提示
+        if locale_code:
+            self._trans_mgr.load_language(locale_code)
 
     def _switch_page(self, page: str):
         mapping = {
