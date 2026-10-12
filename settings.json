@@ -2,24 +2,32 @@
   "min_large_file_mb": 100,
   "old_file_days": 90,
   "scan_paths": [
-    "C:/"
+    "C:/",
+    "C:/Temp"
   ],
   "exclude_paths": [],
   "theme": "dark",
   "language": "en_US",
   "use_recycle_bin": true,
   "confirm_before_delete": true,
+  "enable_duplicate_scan": true,
+  "hash_algorithm": "md5",
+  "duplicate_min_size_mb": 8,
+  "duplicate_scan_budget_seconds": 60,
   "window_width": 1200,
   "window_height": 800,
   "splitter_sizes": [
     250,
-    950
+    949
   ],
-  "last_page": "scan",
+  "last_page": "advisor",
   "selected_file_paths": [],
   "file_list_sort_column": 2,
   "file_list_sort_order": 2,
   "file_list_filter_index": 0,
-  "last_scan_paths": [],
+  "last_scan_paths": [
+    "C:/",
+    "C:/Temp"
+  ],
   "last_selected_files": []
 }
