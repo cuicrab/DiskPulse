@@ -1,15 +1,22 @@
-import os
+import time
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from app.models.advisor_item import AdvisorItem
 from app.models.scan_result import ScanResult
-from app.scanner.cache_detector import scan_cache_paths, resolve_env_path
+from app.scanner.cache_detector import resolve_env_path, find_files_shallow
 from app.scanner.recycler import get_recycle_bin_info
-from app.utils.file_ops import get_folder_size
 
 
 from app.utils import resource_path
+
+
+def _mtime_or_zero(path: Path) -> float:
+    """取文件的最后修改时间；取不到时返回 0（视为最旧）。"""
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
 
 
 class AdvisorEngine:
@@ -105,22 +112,40 @@ class AdvisorEngine:
         if not paths:
             return None
 
+        # max_age_days：只纳入"超过该天数未被修改"的文件。
+        # 为 0 表示不做年龄过滤（rules.yaml 中原为 0 的规则行为不变）。
+        if max_age_days and max_age_days > 0:
+            cutoff = time.time() - max_age_days * 86400
+        else:
+            cutoff = None
+
         all_files = []
         total_size = 0
+        seen_paths = set()
         for pattern in paths:
-            resolved = resolve_env_path(pattern)
-            for rp in resolved:
+            for rp in resolve_env_path(pattern):
                 if rp.is_file():
-                    s = rp.stat().st_size
-                    all_files.append(rp)
-                    total_size += s
+                    candidates = [rp]
                 elif rp.is_dir():
-                    total_size += get_folder_size(rp)
+                    # 浅层枚举：缓存/临时目录的文件直接位于目录内。
+                    # 一次遍历同时得到文件列表与总大小，替代原先
+                    # get_folder_size() + rglob() 的两次整树遍历。
+                    candidates = find_files_shallow(rp)
+                else:
+                    continue
+
+                for f in candidates:
+                    key = str(f)
+                    if key in seen_paths:
+                        continue
+                    mt = _mtime_or_zero(f)
+                    if cutoff is not None and mt >= cutoff:
+                        continue
+                    seen_paths.add(key)
+                    all_files.append(f)
                     try:
-                        for f in rp.rglob("*"):
-                            if f.is_file():
-                                all_files.append(f)
-                    except (PermissionError, OSError):
+                        total_size += f.stat().st_size
+                    except OSError:
                         continue
 
         if all_files:

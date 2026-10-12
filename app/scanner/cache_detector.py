@@ -36,6 +36,25 @@ def resolve_env_path(pattern: str) -> List[Path]:
     return []
 
 
+def find_files_shallow(directory: Path) -> List[Path]:
+    """列出一层文件：只枚举目录的直接子文件，不递归进子目录。
+
+    缓存/临时目录（Chrome Cache、%TEMP% 等）的文件都直接位于目录内，
+    只扫一层即可，避免对大目录做整树遍历。
+    """
+    found: List[Path] = []
+    try:
+        for entry in os.scandir(str(directory)):
+            try:
+                if entry.is_file(follow_symlinks=False):
+                    found.append(Path(entry.path))
+            except (PermissionError, OSError):
+                continue
+    except (PermissionError, OSError):
+        pass
+    return found
+
+
 def scan_cache_paths(paths: List[str]) -> List[FileItem]:
     items = []
     seen = set()
@@ -45,21 +64,17 @@ def scan_cache_paths(paths: List[str]) -> List[FileItem]:
             if str(path) in seen:
                 continue
             seen.add(str(path))
-            try:
-                for entry in os.scandir(str(path)):
-                    try:
-                        if entry.is_file(follow_symlinks=False):
-                            stat = entry.stat()
-                            items.append(FileItem(
-                                path=Path(entry.path),
-                                size=stat.st_size,
-                                modified_time=datetime.fromtimestamp(stat.st_mtime),
-                                accessed_time=datetime.fromtimestamp(stat.st_atime),
-                                created_time=datetime.fromtimestamp(stat.st_ctime),
-                                category=FileCategory.CACHE,
-                            ))
-                    except (PermissionError, OSError):
-                        continue
-            except (PermissionError, OSError):
-                continue
+            for entry in find_files_shallow(path):
+                try:
+                    stat = entry.stat()
+                    items.append(FileItem(
+                        path=entry,
+                        size=stat.st_size,
+                        modified_time=datetime.fromtimestamp(stat.st_mtime),
+                        accessed_time=datetime.fromtimestamp(stat.st_atime),
+                        created_time=datetime.fromtimestamp(stat.st_ctime),
+                        category=FileCategory.CACHE,
+                    ))
+                except (PermissionError, OSError):
+                    continue
     return items
