@@ -28,6 +28,9 @@ class AppSettings:
     confirm_before_delete: bool = True
     enable_duplicate_scan: bool = True
     hash_algorithm: str = "md5"
+    # 重复文件比对限制：小于该体积的文件不参与；超过时间预算即停止并返回已确认结果
+    duplicate_min_size_mb: int = 8
+    duplicate_scan_budget_seconds: int = 60
 
     # Session state
     window_width: int = 1100

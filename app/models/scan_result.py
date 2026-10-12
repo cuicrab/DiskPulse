@@ -13,6 +13,8 @@ class ScanResult:
     temp_files: List[FileItem] = field(default_factory=list)
     empty_folders: List[FileItem] = field(default_factory=list)
     duplicate_groups: List[List[FileItem]] = field(default_factory=list)
+    # 重复文件比对是否因时间上限/取消而提前结束（结果不完整）
+    duplicate_scan_truncated: bool = False
     cache_files: List[FileItem] = field(default_factory=list)
     old_files: List[FileItem] = field(default_factory=list)
 

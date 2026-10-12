@@ -196,6 +196,25 @@ QMainWindow
   **重复组约定**：组内第一个为保留项，按 mtime 升序（最旧优先），其余为可删除副本
   —— 因为 `AdvisorEngine.analyze()` 用 `group[1:]` 计算可释放空间。缓存扫描的文件
   **不并入** `_all_files`，否则同一文件被登记两次会让重复检测产生假阳性。
+- **`_scan_directory` 逐目录上报权限不足会把状态栏刷屏**（整盘扫描常有几百个无权限目录，
+  每命中一个就 `progress.emit("权限不足，跳过: <路径>")`，而 UI 直接 setText 覆盖）。
+  已改为只累加 `_denied_count`，由 `run()` 在扫描结束后汇总上报一次。
+- **哈希查重会无休止读盘**：`find_duplicates` 原先对所有同尺寸文件逐个算全文件 MD5，
+  没有进度上报、时间上限或取消检查，而 UI 只显示一句静态提示 —— 表现为"卡死"。
+  已改为：两阶段哈希（先比大小 → 64KB 前缀哈希筛候选 → 只对候选读全文）、
+  实时进度（`比对 x/y，已找到 n 组`）、`should_stop` 取消检查（每读约 4MB 一次）、
+  时间预算、以及最小体积下限：
+
+  | 配置 | 默认 | 含义 |
+  |---|---|---|
+  | `enable_duplicate_scan` | `true` | 是否做重复文件比对 |
+  | `hash_algorithm` | `"md5"` | 哈希算法（`hashlib.new`，非法值回退 md5） |
+  | `duplicate_min_size_mb` | `8` | 小于该体积的文件不参与比对 |
+  | `duplicate_scan_budget_seconds` | `60` | 超过该秒数即停止，返回已确认结果 |
+
+  超时截断时 `ScanResult.duplicate_scan_truncated = True`，扫描完成对话框会给出提示。
+  **注意**：因为默认下限是 8MB，小于 8MB 的重复文件不会出现在结果里，这是刻意的取舍
+  （小文件数量极多、收益低）；调整 `duplicate_min_size_mb` 可改变范围。
 
 ### i18n 模块解析（重要，与早期记载相反）
 

@@ -24,15 +24,20 @@ class ScanEngine(QThread):
         self._is_running = True
         self._all_files: List[FileItem] = []
         self._seen_inodes: Set[str] = set()
+        self._denied_count = 0
 
     def stop(self):
         self._is_running = False
+
+    def _should_stop(self) -> bool:
+        return not self._is_running
 
     def run(self):
         result = ScanResult()
         start_time = time.time()
         self._all_files = []
         self._seen_inodes.clear()
+        self._denied_count = 0
 
         for path_str in self.settings.scan_paths:
             path = Path(path_str)
@@ -40,6 +45,11 @@ class ScanEngine(QThread):
                 continue
             self.progress.emit(f"正在扫描: {path}")
             self._scan_directory(path, result)
+
+        # 权限不足的目录可能成百上千个，逐条上报会把状态栏刷屏，
+        # 这里只在结束时汇总一次
+        if self._denied_count:
+            self.progress.emit(f"扫描完成，{self._denied_count} 个目录无访问权限已跳过")
 
         elapsed = time.time() - start_time
         result.duration_seconds = elapsed
@@ -62,8 +72,7 @@ class ScanEngine(QThread):
         self.progress.emit("正在查找缓存文件...")
         self._find_cache_files(result)
 
-        if self.settings.enable_duplicate_scan:
-            self.progress.emit("正在查找重复文件（按内容哈希比对）...")
+        if self.settings.enable_duplicate_scan and self._is_running:
             self._find_duplicate_files(result)
 
         result.total_size = sum(item.size for item in self._all_files)
@@ -104,11 +113,20 @@ class ScanEngine(QThread):
         return patterns
 
     def _find_duplicate_files(self, result: ScanResult):
-        """基于内容哈希找出重复文件；组内第一个为保留项，其余为可删除副本。"""
-        groups = find_duplicates(self._all_files)
-        if not self._is_running:
-            return
+        """基于内容哈希找出重复文件；组内第一个为保留项，其余为可删除副本。
+
+        受 min_size / time_budget 限制，并支持随时取消，避免整盘比对无休止读盘。
+        """
+        groups, truncated = find_duplicates(
+            self._all_files,
+            algorithm=self.settings.hash_algorithm,
+            min_size=self.settings.duplicate_min_size_mb * 1024 * 1024,
+            time_budget_seconds=self.settings.duplicate_scan_budget_seconds,
+            should_stop=self._should_stop,
+            on_progress=self.progress.emit,
+        )
         result.duplicate_groups = groups
+        result.duplicate_scan_truncated = truncated
 
     def _scan_directory(self, path: Path, result: ScanResult):
         try:
@@ -134,7 +152,8 @@ class ScanEngine(QThread):
                 except (PermissionError, OSError):
                     continue
         except (PermissionError, OSError):
-            self.progress.emit(f"权限不足，跳过: {path}")
+            # 只计数，由 run() 在扫描结束后汇总上报一次，避免状态栏被刷屏
+            self._denied_count += 1
 
     def _analyze_large_files(self, result: ScanResult):
         min_size = self.settings.min_large_file_mb * 1024 * 1024

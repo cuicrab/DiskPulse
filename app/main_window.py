@@ -402,24 +402,29 @@ class MainWindow(QMainWindow):
         self._switch_page("scan")
         self._refresh_advice()
 
-        QMessageBox.information(
-            self,
-            tr("MainWindow", "扫描完成"),
-            tr("MainWindow", "文件数：{}\n文件夹数：{}\n总大小：{}\n大文件(>{}MB)：{} 个\n临时文件：{} 个\n旧文件(>{}天)：{} 个\n空文件夹：{} 个\n缓存文件：{} 个\n重复文件组：{} 组\n扫描耗时：{} 秒").format(
-                result.total_files,
-                result.total_folders,
-                result.total_size_str,
-                self.settings.min_large_file_mb,
-                len(result.large_files),
-                len(result.temp_files),
-                self.settings.old_file_days,
-                len(result.old_files),
-                len(result.empty_folders),
-                len(result.cache_files),
-                len(result.duplicate_groups),
-                f"{result.duration_seconds:.1f}",
-            ),
+        summary = tr("MainWindow", "文件数：{}\n文件夹数：{}\n总大小：{}\n大文件(>{}MB)：{} 个\n临时文件：{} 个\n旧文件(>{}天)：{} 个\n空文件夹：{} 个\n缓存文件：{} 个\n重复文件组：{} 组（仅比对 ≥{}MB 的文件）\n扫描耗时：{} 秒").format(
+            result.total_files,
+            result.total_folders,
+            result.total_size_str,
+            self.settings.min_large_file_mb,
+            len(result.large_files),
+            len(result.temp_files),
+            self.settings.old_file_days,
+            len(result.old_files),
+            len(result.empty_folders),
+            len(result.cache_files),
+            len(result.duplicate_groups),
+            self.settings.duplicate_min_size_mb,
+            f"{result.duration_seconds:.1f}",
         )
+        if result.duplicate_scan_truncated:
+            summary += tr(
+                "MainWindow",
+                "\n\n注意：重复文件比对达到 {} 秒上限已提前结束，结果可能不完整。"
+                "可在 settings.json 中调大 duplicate_scan_budget_seconds，"
+                "或调小 duplicate_min_size_mb 以改变比对范围。",
+            ).format(self.settings.duplicate_scan_budget_seconds)
+        QMessageBox.information(self, tr("MainWindow", "扫描完成"), summary)
 
     def _refresh_advice(self):
         suggestions = self.advisor_engine.analyze(self._scan_result)
