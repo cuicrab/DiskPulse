@@ -21,8 +21,13 @@ def hash_file(path: Path, chunk_size: int = 8192) -> str:
 
 def find_duplicates(files: List[FileItem]) -> List[List[FileItem]]:
     size_map: Dict[int, List[FileItem]] = defaultdict(list)
+    seen_paths = set()
     for f in files:
-        if f.size > 0:
+        # 同一个路径只算一次：调用方传入的列表若有重复条目
+        # （例如缓存扫描与目录扫描重叠），否则会凭空造出"重复文件"
+        key = str(f.path)
+        if f.size > 0 and key not in seen_paths:
+            seen_paths.add(key)
             size_map[f.size].append(f)
 
     hash_map: Dict[str, List[FileItem]] = defaultdict(list)
@@ -39,5 +44,7 @@ def find_duplicates(files: List[FileItem]) -> List[List[FileItem]]:
         if len(group) >= 2:
             for f in group:
                 f.category = FileCategory.DUPLICATE
-            result.append(group)
+            # 约定：组内第一个为保留的"原文件"，其余为判定删除的重复副本。
+            # 按修改时间升序（最旧优先）排列，使"可释放空间"与建议删除的集合稳定可复现。
+            result.append(sorted(group, key=lambda x: (x.modified_time, str(x.path))))
     return result

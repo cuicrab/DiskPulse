@@ -8,6 +8,8 @@ from PySide6.QtCore import QThread, Signal
 from app.models.file_item import FileItem, FileCategory
 from app.models.scan_result import ScanResult
 from app.models.settings import AppSettings
+from app.scanner.cache_detector import scan_cache_paths
+from app.scanner.duplicate import find_duplicates
 
 
 class ScanEngine(QThread):
@@ -57,8 +59,56 @@ class ScanEngine(QThread):
         self.progress.emit("正在查找旧文件...")
         self._find_old_files(result)
 
+        self.progress.emit("正在查找缓存文件...")
+        self._find_cache_files(result)
+
+        if self.settings.enable_duplicate_scan:
+            self.progress.emit("正在查找重复文件（按内容哈希比对）...")
+            self._find_duplicate_files(result)
+
         result.total_size = sum(item.size for item in self._all_files)
         self.finished_signal.emit(result)
+
+    def _find_cache_files(self, result: ScanResult):
+        """扫描 rules.yaml 中的缓存/临时类规则命中的目录。"""
+        patterns = self._load_cache_patterns()
+        if not patterns:
+            return
+        found = scan_cache_paths(patterns)
+        if not self._is_running:
+            return
+        for f in found:
+            f.category = FileCategory.CACHE
+        result.cache_files = found
+        # 注意：不并入 _all_files。缓存目录可能与扫描路径重叠，
+        # 同一个文件被登记两次会让重复检测产生假阳性。
+
+    @staticmethod
+    def _load_cache_patterns() -> List[str]:
+        """只取缓存/临时类规则的路径，排除"最近使用/预读"这类非缓存规则。"""
+        import yaml
+        from app.utils import resource_path
+
+        try:
+            with open(resource_path("rules.yaml"), encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except (OSError, yaml.YAMLError):
+            return []
+
+        skip = {"recent_files", "prefetch", "recycler"}
+        patterns: List[str] = []
+        for rule in data.get("rules", []):
+            if rule.get("name") in skip:
+                continue
+            patterns.extend(rule.get("paths", []))
+        return patterns
+
+    def _find_duplicate_files(self, result: ScanResult):
+        """基于内容哈希找出重复文件；组内第一个为保留项，其余为可删除副本。"""
+        groups = find_duplicates(self._all_files)
+        if not self._is_running:
+            return
+        result.duplicate_groups = groups
 
     def _scan_directory(self, path: Path, result: ScanResult):
         try:

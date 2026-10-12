@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QAction
 
 from app.models.settings import AppSettings
-from app.models.file_item import FileItem
+from app.models.file_item import FileItem, FileCategory
 from app.scanner.engine import ScanEngine
 from app.advisor.engine import AdvisorEngine
 from app.advisor.actions import AdvisorActions
@@ -382,6 +382,22 @@ class MainWindow(QMainWindow):
             self.file_list.add_items(result.old_files)
         if result.empty_folders:
             self.file_list.add_items(result.empty_folders[:100])
+        if result.cache_files:
+            self.file_list.add_items(result.cache_files[:200])
+        if result.duplicate_groups:
+            # 组内全部条目都标记为重复文件；每组的第一个是保留项，
+            # 删除动作（文件列表与清理建议）只针对 group[1:]
+            duplicate_items = []
+            for group in result.duplicate_groups:
+                for f in group:
+                    # 带上主类别，否则同时是大文件/旧文件的重复项会丢掉原有标签
+                    cats = [f.category]
+                    cats.extend(c for c in f.categories if c not in cats)
+                    if FileCategory.DUPLICATE not in cats:
+                        cats.append(FileCategory.DUPLICATE)
+                    f.categories = cats
+                    duplicate_items.append(f)
+            self.file_list.add_items(duplicate_items)
 
         self._switch_page("scan")
         self._refresh_advice()
@@ -389,7 +405,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self,
             tr("MainWindow", "扫描完成"),
-            tr("MainWindow", "文件数：{}\n文件夹数：{}\n总大小：{}\n大文件(>{}MB)：{} 个\n临时文件：{} 个\n旧文件(>{}天)：{} 个\n空文件夹：{} 个\n扫描耗时：{} 秒").format(
+            tr("MainWindow", "文件数：{}\n文件夹数：{}\n总大小：{}\n大文件(>{}MB)：{} 个\n临时文件：{} 个\n旧文件(>{}天)：{} 个\n空文件夹：{} 个\n缓存文件：{} 个\n重复文件组：{} 组\n扫描耗时：{} 秒").format(
                 result.total_files,
                 result.total_folders,
                 result.total_size_str,
@@ -399,6 +415,8 @@ class MainWindow(QMainWindow):
                 self.settings.old_file_days,
                 len(result.old_files),
                 len(result.empty_folders),
+                len(result.cache_files),
+                len(result.duplicate_groups),
                 f"{result.duration_seconds:.1f}",
             ),
         )

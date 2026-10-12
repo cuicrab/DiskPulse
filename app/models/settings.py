@@ -17,6 +17,8 @@ class AppSettings:
     language: str = "zh_CN"
     use_recycle_bin: bool = True
     confirm_before_delete: bool = True
+    enable_duplicate_scan: bool = True
+    hash_algorithm: str = "md5"
 
     # Session state
     window_width: int = 1100

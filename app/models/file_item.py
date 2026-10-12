@@ -30,9 +30,13 @@ class FileItem:
 
     @property
     def all_categories(self) -> List[FileCategory]:
-        if self.categories:
-            return self.categories
-        return [self.category]
+        # category 是主类别（决定标签主色），categories 是附加类别。
+        # 两者都要保留，否则同时属于多个类别的文件会丢掉主类别标签。
+        result = [self.category]
+        for cat in self.categories:
+            if cat not in result:
+                result.append(cat)
+        return result
 
     @property
     def size_str(self) -> str:
