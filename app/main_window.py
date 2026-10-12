@@ -168,9 +168,9 @@ class MainWindow(QMainWindow):
         # 侧边栏导航按钮
         if hasattr(self, 'nav_buttons'):
             nav_texts = {
-                "dashboard": tr("MainWindow", "📊  仪表盘"),
-                "scan": tr("MainWindow", "🔍  扫描结果"),
-                "advisor": tr("MainWindow", "🧠  清理建议"),
+                "dashboard": tr("MainWindow", "仪表盘"),
+                "scan": tr("MainWindow", "扫描结果"),
+                "advisor": tr("MainWindow", "清理建议"),
             }
             for key, btn in self.nav_buttons.items():
                 if key in nav_texts:
@@ -254,9 +254,9 @@ class MainWindow(QMainWindow):
 
         self.nav_buttons = {}
         nav_items = [
-            ("dashboard", tr("MainWindow", "📊  仪表盘")),
-            ("scan", tr("MainWindow", "🔍  扫描结果")),
-            ("advisor", tr("MainWindow", "🧠  清理建议")),
+            ("dashboard", tr("MainWindow", "仪表盘")),
+            ("scan", tr("MainWindow", "扫描结果")),
+            ("advisor", tr("MainWindow", "清理建议")),
         ]
 
         for key, text in nav_items:

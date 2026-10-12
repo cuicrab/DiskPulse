@@ -17,11 +17,10 @@ class MiniGauge(QWidget):
         self._percent = 0
         self._used = 0
         self._total = 0
-        self.setMinimumSize(100, 130)
-        self.setMaximumSize(160, 180)
+        self.setMinimumSize(104, 128)
+        self.setMaximumSize(150, 168)
         self.setCursor(Qt.PointingHandCursor)
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setSizePolicy(sizePolicy)
 
     def set_data(self, used: int, total: int):
@@ -196,7 +195,8 @@ class DashboardPage(QFrame):
         self.gauge = DiskGauge()
 
         self.drives_grid = QGridLayout()
-        self.drives_grid.setSpacing(8)
+        self.drives_grid.setHorizontalSpacing(18)
+        self.drives_grid.setVerticalSpacing(10)
         self.drives_grid.setAlignment(Qt.AlignCenter)
 
         self.scan_btn = QPushButton(tr("DashboardPage", "开始扫描"))
@@ -211,17 +211,19 @@ class DashboardPage(QFrame):
         self.info_label.setAlignment(Qt.AlignCenter)
 
         layout = self.layout()
-        layout.addStretch()
+        layout.setSpacing(10)
+        layout.addStretch(2)
         layout.addWidget(self._title_label)
         layout.addWidget(self._subtitle_label)
-        layout.addSpacing(8)
+        layout.addSpacing(26)
         layout.addLayout(self.drives_grid)
-        layout.addSpacing(4)
+        layout.addSpacing(20)
         layout.addWidget(self.gauge, 0, Qt.AlignCenter)
+        layout.addSpacing(6)
         layout.addWidget(self.info_label)
-        layout.addSpacing(8)
+        layout.addSpacing(22)
         layout.addWidget(self.scan_btn, 0, Qt.AlignCenter)
-        layout.addStretch()
+        layout.addStretch(3)
 
     def _load_all_drives(self):
         for i in reversed(range(self.drives_grid.count())):
@@ -247,6 +249,7 @@ class DashboardPage(QFrame):
                 gauge = MiniGauge(f"{letter}:")
                 gauge.set_data(usage.used, usage.total)
                 gauge.clicked.connect(self._on_drive_selected)
+                # AlignVCenter 让卡片各自居中，而不是被拉伸填满整格
                 self.drives_grid.addWidget(gauge, row, col, Qt.AlignCenter)
                 self._mini_gauges.append(gauge)
 
@@ -261,6 +264,8 @@ class DashboardPage(QFrame):
                     row += 1
             except Exception:
                 continue
+
+        # 不设列拉伸：让网格按卡片自然宽度收拢，由 setAlignment(AlignCenter) 整体居中
 
         if selected_drive:
             self.gauge.set_data(selected_drive, selected_used, selected_total)

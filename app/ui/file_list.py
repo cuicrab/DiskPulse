@@ -1,24 +1,25 @@
 from typing import List, Optional, Set
-from PySide6.QtCore import Qt, Signal, QSize, QEvent
-from PySide6.QtGui import QColor, QAction, QFont
+from PySide6.QtCore import Qt, Signal, QSize, QEvent, QRect
+from PySide6.QtGui import QColor, QAction, QFont, QPainter
 from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QHeaderView, QAbstractItemView,
     QFrame, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
     QCheckBox, QWidget, QComboBox, QMenu, QMessageBox,
-    QStyleOptionViewItem, QStyledItemDelegate,
+    QStyleOptionViewItem, QStyledItemDelegate, QStyle,
 )
 
 from app.models.file_item import FileItem, FileCategory
 from app.i18n import tr
 
+# 类别标签用低饱和色，配合深色背景与浅色文字，避免高饱和“荧光”感
 CATEGORY_MAP = {
-    FileCategory.LARGE_FILE: ("大文件", "#e17055"),
-    FileCategory.DUPLICATE: ("重复文件", "#fdcb6e"),
-    FileCategory.TEMP_FILE: ("临时文件", "#74b9ff"),
-    FileCategory.EMPTY_FOLDER: ("空文件夹", "#a29bfe"),
-    FileCategory.CACHE: ("缓存文件", "#55efc4"),
-    FileCategory.OLD_FILE: ("旧文件", "#fab1a0"),
-    FileCategory.RECYCLER: ("回收站", "#ff7675"),
+    FileCategory.LARGE_FILE: ("大文件", "#F0A44A"),
+    FileCategory.DUPLICATE: ("重复文件", "#D8C36B"),
+    FileCategory.TEMP_FILE: ("临时文件", "#6FA8DC"),
+    FileCategory.EMPTY_FOLDER: ("空文件夹", "#9B8FE0"),
+    FileCategory.CACHE: ("缓存文件", "#3FD9A4"),
+    FileCategory.OLD_FILE: ("旧文件", "#D99A82"),
+    FileCategory.RECYCLER: ("回收站", "#E06C5F"),
 }
 
 CATEGORY_FILTER_OPTIONS = [
@@ -41,51 +42,72 @@ SORT_OPTIONS = [
 
 
 class CategoryDelegate(QStyledItemDelegate):
-    """Custom delegate to render multiple category tags in a cell."""
+    """在类别列绘制多个圆角标签。
+
+    数据源：列 5 的 Qt.UserRole（add_items 里写入的 categories 列表）。
+    列 0 的 UserRole 存的是路径、UserRole+1 才是类别，不要读错。
+    """
+
+    @staticmethod
+    def _categories(index):
+        cats = index.data(Qt.UserRole)
+        # 只接受类别列表，避免把路径字符串当成可迭代对象逐字符渲染
+        if not cats or isinstance(cats, str):
+            return []
+        return list(cats)
 
     def paint(self, painter, option, index):
-        categories = index.data(Qt.UserRole)
+        categories = self._categories(index)
         if not categories:
             super().paint(painter, option, index)
             return
 
+        # 先自行绘制行背景，再把标签叠上去；
+        # 若直接 super().paint() 会连单元格文字一起画出来造成重影
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        opt.text = ""
+        opt.widget.style().drawControl(QStyle.CE_ItemViewItem, opt, painter, opt.widget)
+
         painter.save()
-        painter.setRenderHint(painter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         rect = option.rect
-        x = rect.left() + 4
-        y = rect.top() + 2
-        row_height = rect.height()
+        x = rect.left() + 6
+        tag_h = min(20, rect.height() - 8)
+        y = rect.top() + (rect.height() - tag_h) // 2
+
+        font = painter.font()
+        font.setPointSizeF(max(7.5, font.pointSizeF() - 1.0))
+        painter.setFont(font)
 
         for cat in categories:
             label, color = CATEGORY_MAP.get(cat, ("其他", "#636e72"))
-            text_width = painter.fontMetrics().horizontalAdvance(label) + 12
-            tag_rect = rect.adjusted(x - rect.left(), 2, x - rect.left() + text_width, -2)
+            text_width = painter.fontMetrics().horizontalAdvance(label) + 18
+            tag_rect = QRect(x, y, text_width, tag_h)
 
-            # Draw rounded background
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(color))
-            painter.drawRoundedRect(tag_rect, 8, 8)
+            painter.drawRoundedRect(tag_rect, tag_h / 2, tag_h / 2)
 
-            # Draw text
-            painter.setPen(QColor("#ffffff"))
+            painter.setPen(QColor("#0B1512"))
             painter.drawText(tag_rect, Qt.AlignCenter, label)
 
-            x += text_width + 4
+            x += text_width + 6
 
         painter.restore()
 
     def sizeHint(self, option, index):
-        categories = index.data(Qt.UserRole)
+        categories = self._categories(index)
         if not categories:
             return super().sizeHint(option, index)
 
         total_width = 0
         for cat in categories:
             label, _ = CATEGORY_MAP.get(cat, ("其他", "#636e72"))
-            total_width += option.fontMetrics.horizontalAdvance(label) + 12 + 4
+            total_width += option.fontMetrics.horizontalAdvance(label) + 18 + 6
 
-        return QSize(total_width + 8, 24)
+        return QSize(total_width + 12, 26)
 
 
 class FileListPanel(QFrame):
@@ -144,10 +166,12 @@ class FileListPanel(QFrame):
         self.sort_combo.blockSignals(False)
 
     def _setup_ui(self):
+        # 只创建一个顶层布局：重复 setLayout / 重复 QVBoxLayout(self)
+        # 会让控件归属混乱，实测会导致整个面板渲染空白
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
-        header = QHBoxLayout()
         self._title_label = QLabel(tr("FileListPanel", "扫描结果"))
         self._title_label.setObjectName("panelTitle")
 
@@ -195,13 +219,16 @@ class FileListPanel(QFrame):
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["", tr("FileListPanel", "文件名"), tr("FileListPanel", "大小"), tr("FileListPanel", "修改时间"), tr("FileListPanel", "路径"), tr("FileListPanel", "类别")])
-        self.tree.setColumnWidth(0, 50)
-        self.tree.setColumnWidth(1, 220)
-        self.tree.setColumnWidth(2, 100)
-        self.tree.setColumnWidth(3, 160)
+        # 列宽之和刻意留出余量，避免出现横向滚动条
+        self.tree.setColumnWidth(0, 44)
+        self.tree.setColumnWidth(1, 240)
+        self.tree.setColumnWidth(2, 96)
+        self.tree.setColumnWidth(3, 150)
         self.tree.setColumnWidth(4, 300)
-        self.tree.setColumnWidth(5, 200)
-        self.tree.header().setStretchLastSection(True)
+        self.tree.setColumnWidth(5, 150)
+        self.tree.header().setStretchLastSection(False)
+        self.tree.header().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.tree.header().setMinimumSectionSize(44)
         self.tree.setAlternatingRowColors(True)
         self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree.setSortingEnabled(True)
@@ -214,11 +241,9 @@ class FileListPanel(QFrame):
         # Set custom delegate for category column (column 5)
         self.tree.setItemDelegateForColumn(5, CategoryDelegate())
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._title_label)
         layout.addLayout(header)
-        layout.addWidget(self.tree)
+        layout.addWidget(self.tree, 1)
 
     def clear_results(self):
         self.tree.clear()

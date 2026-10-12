@@ -72,8 +72,7 @@ class AdvisorCard(QFrame):
         count_label.setObjectName("advisorCount")
         top_layout.addWidget(count_label)
 
-        layout = self.layout()
-        layout.addLayout(top_layout)
+        self.layout().addLayout(top_layout)
 
         self.file_tree = QTreeWidget()
         self.file_tree.setHeaderLabels(["", tr("AdvisorCard", "文件名"), tr("AdvisorCard", "路径")])
@@ -196,7 +195,7 @@ class AdvisorPanel(QFrame):
         super().changeEvent(event)
 
     def retranslateUi(self):
-        self._title_label.setText(tr("AdvisorPanel", '🧠 清理建议（展开后可逐文件勾选）'))
+        self._title_label.setText(tr("AdvisorPanel", "清理建议"))
         self.clean_btn.setText(tr("AdvisorPanel", "清理选中项"))
         for card in self._cards:
             card.retranslateUi()
@@ -204,8 +203,9 @@ class AdvisorPanel(QFrame):
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
-        self._title_label = QLabel(tr("AdvisorPanel", '🧠 清理建议（展开后可逐文件勾选）'))
+        self._title_label = QLabel(tr("AdvisorPanel", "清理建议"))
         self._title_label.setObjectName("panelTitle")
         layout.addWidget(self._title_label)
 
