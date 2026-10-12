@@ -570,7 +570,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'file_list') and self.file_list:
             self.settings.selected_file_paths = [str(p) for p in self.file_list.get_selected_paths()]
             self.settings.file_list_sort_column = self.file_list.tree.sortColumn()
-            self.settings.file_list_sort_order = int(self.file_list.tree.header().sortIndicatorOrder())
+            # PySide6 下 int(Qt.SortOrder) 会抛 TypeError，必须取 .value
+            self.settings.file_list_sort_order = self.file_list.tree.header().sortIndicatorOrder().value
             self.settings.file_list_filter_index = self.file_list.filter_combo.currentIndex()
 
         # Save scan paths
